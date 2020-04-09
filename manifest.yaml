@@ -1,0 +1,65 @@
+type: install
+id: jitsi
+name: Jitsi Video Conferencing
+baseUrl: https://raw.githubusercontent.com/vlobzakov/jitsi/master
+logo: images/logo.png
+
+description: 
+  text: Launch a browser mobile application with the Jitsi Meet URL to join the meeting
+  short: Host your own Jitsi server
+
+globals: 
+  user: admin 
+  password: ${fn.password}
+  
+nodes:
+  nodeType: dockerengine
+  nodeGroup: cp
+  cloudlets: 16
+  extip: true
+  displayName: Jitsi Server
+
+onInstall:
+  - install
+  
+actions:
+  install:
+    cmd[cp]: |-
+      git clone https://github.com/jitsi/docker-jitsi-meet && cd docker-jitsi-meet;
+      cp env.example .env;
+
+      #Adjusting configs
+      sed -i.bak \
+        -e "s|HTTP_PORT=.*|HTTP_PORT=80|g" \
+        -e "s|HTTPS_PORT=.*|HTTPS_PORT=443|g" \
+        -e "s|#PUBLIC_URL=.*|PUBLIC_URL=https://${env.domain}|g" \
+        -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" \
+        -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
+        -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email}|g" \
+        -e "s|#ENABLE_AUTH=.*|ENABLE_AUTH=1|g" \
+        -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
+        -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
+        -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
+        .env
+
+      ./gen-passwords.sh;
+      mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
+      docker-compose up -d
+      
+      #Checking of container is up and running 
+      until [ "`/usr/bin/docker inspect -f {{.State.Running}} docker-jitsi-meet_prosody_1`"=="true" ]; do
+        sleep 1
+        print '.'
+      done;      
+      
+      #Adding admin user 
+      docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
+      echo OK
+
+user: root
+
+startPage: https://${env.domain}
+success: | 
+  **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
+  **User**: ${globals.user}  
+  **Password**: ${globals.password}
