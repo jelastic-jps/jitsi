@@ -1,0 +1,35 @@
+type: install
+version: '1.7'
+id: jitsi
+name: Jitsi Video Conferencing
+baseUrl: https://raw.githubusercontent.com/vlobzakov/jitsi/master
+logo: images/logo_jitsi_jelastic.png
+
+description: 
+  text: Launch a browser mobile application with the Jitsi Meet URL to join the meeting
+  short: Host your own Jitsi server
+
+nodes:
+  count: 1
+  cloudlets: 12
+  nodeType: dockerengine
+  displayName: Jitsi Server
+
+globals:
+  meeting_PORT: 8443
+
+onInstall:
+  - jitsiInstall
+  
+actions:
+    jitsiInstall:
+    - cmd [dockerengine]:
+         git clone https://github.com/jitsi/docker-jitsi-meet && cd docker-jitsi-meet;
+         cp env.example .env;
+         ./gen-passwords.sh;
+         mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
+         docker-compose up -d
+      user: root
+
+startPage: https://node${nodes.extra.master.id}-${env.domain}:${globals.meeting_PORT}
+success: Open URL to manage your Jitsi server **[https://node${nodes.extra.master.id}-${env.domain}:${globals.meeting_PORT}](https://node${nodes.extra.master.id}-${env.domain}:${globals.meeting_PORT})** and invite others sharing this link. It takes couple minutes for Jitsi server to start, so refresh the web page if necessary.
