@@ -55,7 +55,6 @@ actions:
       #Adding admin user 
       docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
       echo OK
-
 user: root
 
 startPage: https://${env.domain}
