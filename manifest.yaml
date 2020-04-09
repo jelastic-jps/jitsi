@@ -2,7 +2,7 @@ type: install
 id: jitsi
 name: Jitsi Video Conferencing
 baseUrl: https://raw.githubusercontent.com/vlobzakov/jitsi/master
-logo: images/logo.png
+logo: /images/logo.svg?sanitize=true
 
 description: 
   text: Launch a browser mobile application with the Jitsi Meet URL to join the meeting
