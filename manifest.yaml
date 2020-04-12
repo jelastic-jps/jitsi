@@ -2,10 +2,10 @@ type: install
 id: jitsi
 name: Jitsi Video Conferencing
 baseUrl: https://raw.githubusercontent.com/vlobzakov/jitsi/master
-logo: /images/logo.svg?sanitize=true
+logo: /images/logo_jitsi_jelastic_small.png
 
 description: 
-  text: Launch a browser mobile application with the Jitsi Meet URL to join the meeting
+  text: Get your security and privacy in communication with Jitsi Video Conferencing Server. Jitsi is a free cross-platform software for instant text messaging (IM), voice messaging (Voice over IP, VoIP) and video chat.
   short: Host your own Jitsi server
 
 globals: 
