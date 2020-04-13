@@ -2,7 +2,7 @@ type: install
 id: jitsi
 name: Jitsi Video Conferencing
 baseUrl: https://raw.githubusercontent.com/jelastic-jps/jitsi/master
-logo: /images/logo_jitsi.svg?sanitize=true
+logo: /images/logo_small.svg?sanitize=true
 
 description: 
   text: Get your security and privacy in communication with Jitsi Video Conferencing Server. Jitsi is a free cross-platform software for instant text messaging (IM), voice messaging (Voice over IP, VoIP) and video chat.
@@ -11,23 +11,34 @@ description:
 globals: 
   user: admin 
   password: ${fn.password}
-  
+
 nodes:
   nodeType: dockerengine
   nodeGroup: cp
   cloudlets: 16
   extip: true
   displayName: Jitsi Server
+  addons: change-domain
 
-onInstall:
-  - install
-  
+settings:
+  domain: 
+    fields: 
+      - name: displayfield
+        type: displayfield
+        hideLabel: true
+        markup: Make sure the the new domain is bound already to the environment via CNAME or via A Record 
+      - name: domain
+        hideLabel: true
+        caption: Domain
+        type: string
+
+onInstall: setup
+
 actions:
-  install:
+  setup:
     cmd[cp]: |-
-      git clone https://github.com/jitsi/docker-jitsi-meet && cd docker-jitsi-meet;
+      git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet;
       cp env.example .env;
-
       #Adjusting configs
       sed -i.bak \
         -e "s|HTTP_PORT=.*|HTTP_PORT=80|g" \
@@ -35,30 +46,59 @@ actions:
         -e "s|#PUBLIC_URL=.*|PUBLIC_URL=https://${env.domain}|g" \
         -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" \
         -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
-        -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email}|g" \
+        -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} --test-cert --break-my-certs|g" \
         -e "s|#ENABLE_AUTH=.*|ENABLE_AUTH=1|g" \
         -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
         -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
         -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
         .env
-
       ./gen-passwords.sh;
       mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
       docker-compose up -d
-      
+
       #Checking of container is up and running 
       until [ "`/usr/bin/docker inspect -f {{.State.Running}} docker-jitsi-meet_prosody_1`"=="true" ]; do
         sleep 1
         print '.'
-      done;      
-      
+      done;
+
       #Adding admin user 
       docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
       echo OK
-user: root
+  
+addons:
+  - id: change-domain
+    name: Domain Configuration
+    description: You can change your current domain and issue valid Let's Encrypt certificates. 
+    buttons:    
+      - confirmText: Are you sure you want to proceed?
+        loadingText: Changing domain...
+        action: changeDomain
+        caption: Change
+        successText: The domain has been updated successfully!
+        settings: domain
+        title: Please specify the new domain name 
+        
+    actions:
+      changeDomain:
+        - script: |
+            var email="${user.email}", domain = "${settings.domain}";
+            if (domain.indexOf("${env.domain}") > -1) email += " --test-cert --break-my-certs";
+            return {result:0, domain:domain, email:email}
 
-startPage: https://${env.domain}
+        - cmd[cp]: |-
+            rm -f ~/.jitsi-meet-cfg/web/nginx/ssl.conf
+            cd docker-jitsi-meet
+            sed -i.bak \
+              -e "s|LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${response.domain}|g" \
+              -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${response.email}|g" \
+              .env
+            docker-compose up -d --force-recreate
+
+    
 success: | 
   **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
   **User**: ${globals.user}  
-  **Password**: ${globals.password}
+  **Password**: ${globals.password}  
+  
+  It may take several minutes till your environment is ready. 
