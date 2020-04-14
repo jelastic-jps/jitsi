@@ -87,11 +87,12 @@ addons:
             return {result:0, domain:domain, email:email}
 
         - cmd[cp]: |-
-            rm -f ~/.jitsi-meet-cfg/web/nginx/ssl.conf
+            rm -f ~/.jitsi-meet-cfg/web/nginx/ssl.conf ~/.jitsi-meet-cfg/web/config.js            
             cd docker-jitsi-meet
             sed -i.bak \
               -e "s|LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${response.domain}|g" \
               -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${response.email}|g" \
+              -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${response.domain}|g" \
               .env
             docker-compose up -d --force-recreate
 
