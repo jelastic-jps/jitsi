@@ -18,7 +18,7 @@ globals:
 nodes:
   nodeType: dockerengine
   nodeGroup: cp
-  cloudlets: 16
+  cloudlets: 48
   extip: true
   displayName: Jitsi Server
   addons: change-domain
