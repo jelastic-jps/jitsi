@@ -35,11 +35,19 @@ settings:
         caption: Domain
         type: string
 
-onInstall: setup
+onInstall: 
+  - enableAudio
+  - setup
 
 actions:
-  setup:
+  enableAudio:
+    script: |
+      var params = {envName:"${env.envName}"}, appid = "c5f40f4531e35aaf7318f76d1a836f42", script = "enable-audio",
+          resp = jelastic.dev.scripting.Eval(appid, session, script, params);
+      return resp.response ? resp.response:resp;      
+  setup:      
     cmd[cp]: |-
+      echo '/root' >> /etc/jelastic/redeploy.conf
       git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet;
       cp env.example .env;
       #Adjusting configs
@@ -54,10 +62,30 @@ actions:
         -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
         -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
         -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
+        -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
         .env
+      
       ./gen-passwords.sh;
+      
       mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
-      docker-compose up -d
+      sed -i.bak \
+        -e "s|// fileRecordingsEnabled:.*|fileRecordingsEnabled: true,|g" \
+        ~/.jitsi-meet-cfg/web/config.js
+      sed -i '/:\/dev\/shm/a \            - ${CONFIG}\/jibri\/\.asoundrc:\/home\/jibri\/\.asoundrc' ~/docker-jitsi-meet/jibri.yml
+        
+      printf '#!/bin/bash
+      RECORDINGS_DIR=$1
+      exit 0' > ~/.jitsi-meet-cfg/jibri/finalize.sh
+                  
+      printf 'pcm.cloop {
+       type dsnoop
+       ipc_key 219348
+       slave.pcm "hw:Loopback,1,0"
+      }' > ~/.jitsi-meet-cfg/jibri/.asoundrc
+      
+      chown 999 -R /dev/snd
+      
+      docker-compose -f docker-compose.yml -f jibri.yml up -d
 
       #Checking of container is up and running 
       until [ "`/usr/bin/docker inspect -f {{.State.Running}} docker-jitsi-meet_prosody_1`"=="true" ]; do
@@ -97,7 +125,7 @@ addons:
               -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${response.email}|g" \
               -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${response.domain}|g" \
               .env
-            docker-compose up -d --force-recreate
+            docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
 
     
 success: | 
