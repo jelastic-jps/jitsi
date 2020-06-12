@@ -65,7 +65,7 @@ actions:
           -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
           .env
 
-        [ "${settings.loadtest:}" ] && sed -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
+        [ "${settings.loadtest:}" ] && sed -i -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
 
         ./gen-passwords.sh;
 
