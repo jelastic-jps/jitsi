@@ -65,12 +65,11 @@ actions:
           -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
           .env
 
+        [ "${settings.loadtest:}" ] && sed -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
+
         ./gen-passwords.sh;
 
         mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
-        sed -i.bak \
-          -e "s|// fileRecordingsEnabled:.*|fileRecordingsEnabled: true,|g" \
-          ~/.jitsi-meet-cfg/web/config.js
         sed -i '/:\/dev\/shm/a \            - ${CONFIG}\/jibri\/\.asoundrc:\/home\/jibri\/\.asoundrc' ~/docker-jitsi-meet/jibri.yml
 
         printf '#!/bin/bash
@@ -95,6 +94,12 @@ actions:
 
         #Adding admin user 
         docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
+        [ "${settings.loadtest:}" ] && {
+          yum install -y java-1.8.0-openjdk-devel
+          wget https://github.com/jelastic-jps/jitsi/raw/jibri/test/GCStats.jar
+          java -jar GCStats.jar
+        }
+                
         echo OK
     - env.file.AddFavorite:
         nodeGroup: cp
@@ -136,7 +141,6 @@ addons:
               -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${response.domain}|g" \
               .env
             docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
-
     
 success: | 
   **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
