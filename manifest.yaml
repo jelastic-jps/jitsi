@@ -58,14 +58,18 @@ actions:
           -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" \
           -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
           -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} --test-cert --break-my-certs|g" \
-          -e "s|#ENABLE_AUTH=.*|ENABLE_AUTH=1|g" \
           -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
           -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
           -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
           -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
           .env
 
-        [ "${settings.loadtest:}" ] && sed -i -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
+        [ "${settings.loadtest:}" ] && { 
+          sed -i -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
+        } || {
+          #enable AUTH if it's not a load test
+          sed -i -e "s|#ENABLE_AUTH=.*|ENABLE_AUTH=1|g" .env
+        }
 
         ./gen-passwords.sh;
 
