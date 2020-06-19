@@ -80,10 +80,38 @@ actions:
         RECORDINGS_DIR=$1
         exit 0' > ~/.jitsi-meet-cfg/jibri/finalize.sh
 
-        printf 'pcm.cloop {
-         type dsnoop
-         ipc_key 219348
-         slave.pcm "hw:Loopback,1,0"
+        printf 'pcm.amix {
+          type dmix
+          ipc_key 219345
+          slave.pcm "hw:Loopback,0,0"
+        }
+
+        pcm.asnoop {
+          type dsnoop
+          ipc_key 219346
+          slave.pcm "hw:Loopback,0,1"
+        }
+
+        pcm.aduplex {
+          type asym
+          playback.pcm "amix"
+          capture.pcm "asnoop"
+        }
+        pcm.ploop {
+          type plug
+          slave.pcm "hw:Loopback,1,1"
+        }
+
+        pcm.cloop {
+          type dsnoop
+          ipc_key 219348
+          slave.pcm "hw:Loopback,1,0"
+        }
+
+
+        pcm.!default {
+          type plug
+          slave.pcm "aduplex"
         }' > ~/.jitsi-meet-cfg/jibri/.asoundrc
 
         chown 999 -R /dev/snd
