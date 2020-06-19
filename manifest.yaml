@@ -42,7 +42,7 @@ onInstall:
 actions:
   enableAudio:
     script: |
-      var params = {envName:"${env.envName}"}, appid = "c5f40f4531e35aaf7318f76d1a836f42", script = "enable-audio",
+      var params = {envName:"${env.envName}"}, appid = "ext", script = "EnableAudio",
           resp = jelastic.dev.scripting.Eval(appid, session, script, params);
       return resp.response ? resp.response:resp;      
   setup:      
