@@ -38,8 +38,9 @@ settings:
 
 onInstall: 
   - enableAudio
+  - setSndOwnership
   - setup
-
+  
 actions:
   enableAudio:
     script: |
@@ -115,8 +116,6 @@ actions:
           slave.pcm "aduplex"
         }' > ~/.jitsi-meet-cfg/jibri/.asoundrc
 
-        chown 999 -R /dev/snd
-
         docker-compose -f docker-compose.yml -f jibri.yml up -d
 
         #Checking of container is up and running 
@@ -144,6 +143,12 @@ actions:
         path: /root
         keyword: home
         isDir: true
+        
+  setSndOwnership:    
+     - cmd[cp]: |-
+        CMD="chown 999 -R /dev/snd"
+        echo $CMD >> /etc/rc.d/rc.local
+        $CMD
         
 addons:
   - id: change-domain
