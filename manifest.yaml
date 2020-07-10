@@ -11,6 +11,9 @@ description:
 targetRegions:
   type: vz7
   
+categories:
+- apps/dev-and-admin-tools
+  
 globals: 
   user: admin 
   password: ${fn.password}
