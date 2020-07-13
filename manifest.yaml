@@ -34,8 +34,13 @@ settings:
         hideLabel: true
         caption: Domain
         type: string
+        vtype: extdomain
 
-onInstall: setup
+
+onInstall:
+  - enableAudio
+  - setSndOwnership
+  - setup
 
 actions:
   setup:
@@ -70,7 +75,116 @@ actions:
       #Adding admin user 
       docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
       echo OK
-  
+
+  enableAudio:
+    script: |
+      var params = {envName:"${env.envName}"}, appid = "ext", script = "EnableAudio",
+          resp = jelastic.dev.scripting.Eval(appid, session, script, params);
+      return resp.response ? resp.response:resp;      
+
+  setup:      
+    - cmd[cp]: |-
+        echo '/root' >> /etc/jelastic/redeploy.conf
+        git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet;
+        cp env.example .env;
+        #Adjusting configs
+        sed -i.bak \
+          -e "s|HTTP_PORT=.*|HTTP_PORT=80|g" \
+          -e "s|HTTPS_PORT=.*|HTTPS_PORT=443|g" \
+          -e "s|#PUBLIC_URL=.*|PUBLIC_URL=https://${env.domain}|g" \
+          -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" \
+          -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
+          -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} --test-cert --break-my-certs|g" \
+          -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
+          -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
+          -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
+          -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
+          .env
+
+        [ "${settings.loadtest:}" ] && { 
+          sed -i -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
+        } || {
+          #enable AUTH if it's not a load test
+          sed -i -e "s|#ENABLE_AUTH=.*|ENABLE_AUTH=1|g" .env
+        }
+
+        ./gen-passwords.sh;
+
+        mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
+        sed -i '/:\/dev\/shm/a \            - ${CONFIG}\/jibri\/\.asoundrc:\/home\/jibri\/\.asoundrc' ~/docker-jitsi-meet/jibri.yml
+
+        printf '#!/bin/bash
+        RECORDINGS_DIR=$1
+        exit 0' > ~/.jitsi-meet-cfg/jibri/finalize.sh
+
+        printf 'pcm.amix {
+          type dmix
+          ipc_key 219345
+          slave.pcm "hw:Loopback,0,0"
+        }
+
+        pcm.asnoop {
+          type dsnoop
+          ipc_key 219346
+          slave.pcm "hw:Loopback,0,1"
+        }
+
+        pcm.aduplex {
+          type asym
+          playback.pcm "amix"
+          capture.pcm "asnoop"
+        }
+        pcm.ploop {
+          type plug
+          slave.pcm "hw:Loopback,1,1"
+        }
+
+        pcm.cloop {
+          type dsnoop
+          ipc_key 219348
+          slave.pcm "hw:Loopback,1,0"
+        }
+
+
+        pcm.!default {
+          type plug
+          slave.pcm "aduplex"
+        }' > ~/.jitsi-meet-cfg/jibri/.asoundrc
+
+        docker-compose -f docker-compose.yml -f jibri.yml up -d
+
+        #Checking of container is up and running 
+        until [ "`/usr/bin/docker inspect -f {{.State.Running}} docker-jitsi-meet_prosody_1`"=="true" ]; do
+          sleep 1
+          print '.'
+        done;
+
+        #Adding admin user 
+        docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
+        [ "${settings.loadtest:}" ] && {
+          yum install -y java-1.8.0-openjdk-devel
+          wget https://github.com/jelastic-jps/jitsi/raw/jibri/test/GCStats.jar
+          java -jar GCStats.jar
+        }
+                
+        echo OK
+    - env.file.AddFavorite:
+        nodeGroup: cp
+        path: /root/.jitsi-meet-cfg/jibri/recordings
+        keyword: RECORDINGS
+        isDir: true
+    - env.file.AddFavorite:
+        nodeGroup: cp
+        path: /root
+        keyword: home
+        isDir: true
+        
+  setSndOwnership:    
+     - cmd[cp]: |-
+        CMD="chown 999 -R /dev/snd"
+        echo $CMD >> /etc/rc.d/rc.local
+        $CMD
+        
 addons:
   - id: change-domain
     name: Domain Configuration
@@ -99,12 +213,12 @@ addons:
               -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${response.email}|g" \
               -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${response.domain}|g" \
               .env
-            docker-compose up -d --force-recreate
-
+            docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
     
 success: | 
   **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
   **User**: ${globals.user}  
-  **Password**: ${globals.password}  
-  
-  It may take several minutes till your environment is ready. 
+  **Password**: ${globals.password}    
+
+  Useful links:
+  * [Secure, Simple and Scalable Video Conferencing with Jitsi](https://jelastic.com/blog/jitsi-video-conferencing/)
