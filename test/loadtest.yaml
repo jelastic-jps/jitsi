@@ -48,7 +48,7 @@ actions:
   setupServer:
     - script: return {result:0, envGroups:eval('(' + MANIFEST + ')').envGroups}
     - install: 
-        jps: https://raw.githubusercontent.com/jelastic-jps/jitsi/jibri/manifest.yaml
+        jps: https://raw.githubusercontent.com/jelastic-jps/jitsi/master/manifest.yaml
         envName: ${globals.serverEnvName}
         envGroups: ${response.envGroups}
         region: ${env.region}
