@@ -10,7 +10,9 @@ description:
 
 targetRegions:
   type: vz7
-  
+
+requiredFeatures: extip
+
 categories:
 - apps/dev-and-admin-tools
   
