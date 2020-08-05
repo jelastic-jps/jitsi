@@ -16,6 +16,7 @@ requiredFeatures: extip
 
 categories:
 - apps/dev-and-admin-tools
+- apps/collaboration
   
 globals: 
   user: admin 
