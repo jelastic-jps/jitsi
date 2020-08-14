@@ -74,7 +74,7 @@ actions:
           -e "s|#PUBLIC_URL=.*|PUBLIC_URL=https://${env.domain}|g" \
           -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" \
           -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
-          -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} --test-cert --break-my-certs|g" \
+          -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} $FAKE_SSL|g" \
           -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
           -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
           -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
