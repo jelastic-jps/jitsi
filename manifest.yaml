@@ -61,6 +61,12 @@ actions:
         echo '/root' >> /etc/jelastic/redeploy.conf
         git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet;
         cp env.example .env;
+
+        #check if region is in public suffix list
+        DOMAIN=${env.domain}; REGION=${DOMAIN#*.}
+        FAKE_SSL="--test-cert --break-my-certs"
+        if wget -qO- https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat | grep -q "$REGION"; then FAKE_SSL=""; fi
+
         #Adjusting configs
         sed -i.bak \
           -e "s|HTTP_PORT=.*|HTTP_PORT=80|g" \
