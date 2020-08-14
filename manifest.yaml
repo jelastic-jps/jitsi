@@ -202,18 +202,23 @@ addons:
         
     actions:
       changeDomain:
-        - script: |
-            var email="${user.email}", domain = "${settings.domain}";
-            if (domain.indexOf("${env.domain}") > -1) email += " --test-cert --break-my-certs";
-            return {result:0, domain:domain, email:email}
-
         - cmd[cp]: |-
             rm -f ~/.jitsi-meet-cfg/web/nginx/ssl.conf ~/.jitsi-meet-cfg/web/config.js            
             cd docker-jitsi-meet
+            
+            SSL_DOMAIN="${settings.domain}"
+            DOMAIN="${env.domain}"; REGION=${DOMAIN#*.}
+            FAKE_SSL=""
+            if [[ "$SSL_DOMAIN" == *"$DOMAIN"* ]]; then   
+              FAKE_SSL="--test-cert --break-my-certs"
+              #check if region is in public suffix list              
+              if wget -qO- https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat | grep -q "$REGION"; then FAKE_SSL=""; fi
+            fi
+                        
             sed -i.bak \
-              -e "s|LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${response.domain}|g" \
-              -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${response.email}|g" \
-              -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${response.domain}|g" \
+              -e "s|LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${settings.domain}|g" \
+              -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} $FAKE_SSL|g" \
+              -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${settings.domain}|g" \
               .env
             docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
     
