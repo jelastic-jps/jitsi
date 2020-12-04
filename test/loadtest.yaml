@@ -1,0 +1,83 @@
+type: install
+id: jitsi-load-test
+name: Jitsi Load Testing
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/jitsi/master
+logo: /images/logo_small.svg?sanitize=true
+
+description: The package will creates the specified number of clients and run instantly the load test. At the end of the test, you can check statistic of java Garbage Collection by executing `java -jar ~/docker-jitsi-meet/GCStats.jar`
+
+globals: 
+  serverEnvName: jibri-server-${fn.random}
+
+settings:
+  fields:
+    - type: spinner
+      name: clients
+      caption: Clients 
+      min: 1
+      max: 16
+      default: 1
+    - name: server
+      type: radio-fieldset
+      values:
+        new: Create a new Jitsi server
+        existing: Use an existing Jisti server
+      default: new
+      showIf:
+        existing:
+          name: url
+          caption: Server Url
+          type: string
+          tooltip: 'Example: https://myjitsi.domain.com/'
+          required: true          
+
+nodes:
+  count: ${settings.clients}
+  nodeType: centos7
+  nodeGroup: vds
+  cloudlets: 48
+  displayName: Jitsi Client
+
+skipNodeEmails: true
+  
+onInstall: 
+  - setupServer
+  - setupClient
+
+actions:
+  setupServer:
+    - script: return {result:0, envGroups:eval('(' + MANIFEST + ')').envGroups}
+    - install: 
+        jps: https://raw.githubusercontent.com/jelastic-jps/jitsi/master/manifest.yaml
+        envName: ${globals.serverEnvName}
+        envGroups: ${response.envGroups}
+        region: ${env.region}
+        displayName: Jitsi Server
+        settings:
+          loadtest: true            
+  
+  setupClient:
+    - cmd[vds]: |-
+        yum install -y xorg-x11-server-Xvfb
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+        yum localinstall -y google-chrome-stable_current_x86_64.rpm
+        useradd jitsi
+        cd /home/jitsi
+        git clone https://github.com/sych74/jihog
+        chmod +x jihog/*.sh
+        wget https://media.xiph.org/video/derf/y4m/FourPeople_1280x720_60.y4m
+        wget https://github.com/jitsi/jitsi-meet-torture/raw/master/resources/fakeAudioStream.wav
+        chown jitsi:jitsi -R /home/jitsi
+    - if ("${settings.server}" == "new"):
+        - script: |
+            var a = "${env.url}".split(".");
+            a.shift();
+            a.unshift("https://${globals.serverEnvName}");
+            return {result: 0, url: a.join(".")}
+        - setGlobals: 
+            server: ${response.url}        
+    - else: 
+        setGlobals: 
+          server: ${settings.url}
+    - forEach(nodes.vds):      
+        cmd[${@i.id}]: screen -mdS loadtest sudo -u jitsi -- sh -c 'cd /home/jitsi/jihog/; /home/jitsi/jihog/warmup.sh ${@} ${globals.server} /home/jitsi/FourPeople_1280x720_60.y4m /home/jitsi/fakeAudioStream.wav'
