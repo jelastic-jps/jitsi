@@ -91,7 +91,7 @@ actions:
 
         ./gen-passwords.sh;
 
-        mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
+        mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri};
         sed -i '/:\/dev\/shm/a \            - ${CONFIG}\/jibri\/\.asoundrc:\/home\/jibri\/\.asoundrc' ~/docker-jitsi-meet/jibri.yml
 
         printf '#!/bin/bash
