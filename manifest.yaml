@@ -80,6 +80,7 @@ actions:
           -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
           -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
           -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
+          -e "s|#XMPP_CROSS_DOMAIN=.*|XMPP_CROSS_DOMAIN=true|g" \
           .env
 
         [ "${settings.loadtest:}" ] && { 
