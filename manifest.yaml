@@ -95,10 +95,6 @@ actions:
         mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri};
         sed -i '/:\/dev\/shm/a \            - ${CONFIG}\/jibri\/\.asoundrc:\/home\/jibri\/\.asoundrc' ~/docker-jitsi-meet/jibri.yml
 
-        printf '#!/bin/bash
-        RECORDINGS_DIR=$1
-        exit 0' > ~/.jitsi-meet-cfg/jibri/finalize.sh
-
         printf 'pcm.amix {
           type dmix
           ipc_key 219345
