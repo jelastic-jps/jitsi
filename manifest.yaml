@@ -2,7 +2,7 @@ type: install
 id: jitsi
 version: 1.7
 name: Jitsi Video Conferencing
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/jitsi/master
+baseUrl: https://raw.githubusercontent.com/sych74/jitsi/master
 logo: /images/logo_small.svg?sanitize=true
 
 description: 
@@ -59,13 +59,13 @@ actions:
   setup:      
     - cmd[cp]: |-
         echo '/root' >> /etc/jelastic/redeploy.conf
-        git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet;
+        git clone https://github.com/sych74/docker-jitsi-meet && cd docker-jitsi-meet;
         cp env.example .env;
 
         #check if region is in public suffix list
         DOMAIN=${env.domain}; REGION=${DOMAIN#*.}
-        FAKE_SSL="--test-cert --break-my-certs"
-        if wget -qO- https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat | grep -q "$REGION"; then FAKE_SSL=""; fi
+        USE_STAGING=1
+        if wget -qO- https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat | grep -q "$REGION"; then USE_STAGING=0; fi
 
         #Adjusting configs
         sed -i.bak \
@@ -74,11 +74,13 @@ actions:
           -e "s|#PUBLIC_URL=.*|PUBLIC_URL=https://${env.domain}|g" \
           -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" \
           -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
-          -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} $FAKE_SSL|g" \
+          -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email}|g" \
+          -e "s|#LETSENCRYPT_USE_STAGING=.*|LETSENCRYPT_USE_STAGING=${USE_STAGING}|g" \
           -e "s|#ENABLE_GUESTS=.*|ENABLE_GUESTS=1|g" \
           -e "s|#AUTH_TYPE=.*|AUTH_TYPE=internal|g" \
           -e "s|#ENABLE_HTTP_REDIRECT=.*|ENABLE_HTTP_REDIRECT=1|g" \
           -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
+          -e "s|#XMPP_CROSS_DOMAIN=.*|XMPP_CROSS_DOMAIN=true|g" \
           .env
 
         [ "${settings.loadtest:}" ] && { 
@@ -90,12 +92,8 @@ actions:
 
         ./gen-passwords.sh;
 
-        mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody,jicofo,jvb,jigasi,jibri};
+        mkdir -p ~/.jitsi-meet-cfg/{web/letsencrypt,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri};
         sed -i '/:\/dev\/shm/a \            - ${CONFIG}\/jibri\/\.asoundrc:\/home\/jibri\/\.asoundrc' ~/docker-jitsi-meet/jibri.yml
-
-        printf '#!/bin/bash
-        RECORDINGS_DIR=$1
-        exit 0' > ~/.jitsi-meet-cfg/jibri/finalize.sh
 
         printf 'pcm.amix {
           type dmix
@@ -208,16 +206,17 @@ addons:
             
             SSL_DOMAIN="${settings.domain}"
             DOMAIN="${env.domain}"; REGION=${DOMAIN#*.}
-            FAKE_SSL=""
+            USE_STAGING=0
             if [[ "$SSL_DOMAIN" == *"$DOMAIN"* ]]; then   
-              FAKE_SSL="--test-cert --break-my-certs"
+              USE_STAGING=1
               #check if region is in public suffix list              
-              if wget -qO- https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat | grep -q "$REGION"; then FAKE_SSL=""; fi
+              if wget -qO- https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat | grep -q "$REGION"; then USE_STAGING=0; fi
             fi
                         
             sed -i.bak \
               -e "s|LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${settings.domain}|g" \
-              -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email} $FAKE_SSL|g" \
+              -e "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email}|g" \
+              -e "s|LETSENCRYPT_USE_STAGING=.*|LETSENCRYPT_USE_STAGING=${USE_STAGING}|g" \
               -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${settings.domain}|g" \
               .env
             docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
