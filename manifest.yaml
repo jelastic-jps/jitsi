@@ -2,7 +2,7 @@ type: install
 id: jitsi
 version: 1.7
 name: Jitsi Video Conferencing
-baseUrl: https://raw.githubusercontent.com/sych74/jitsi/master
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/jitsi/master
 logo: /images/logo_small.svg?sanitize=true
 
 description: 
@@ -59,7 +59,7 @@ actions:
   setup:      
     - cmd[cp]: |-
         echo '/root' >> /etc/jelastic/redeploy.conf
-        git clone https://github.com/sych74/docker-jitsi-meet && cd docker-jitsi-meet;
+        git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet;
         cp env.example .env;
 
         #check if region is in public suffix list
