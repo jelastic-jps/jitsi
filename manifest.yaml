@@ -186,9 +186,10 @@ actions:
         $CMD
         
 addons:
-  - id: change-domain
-    name: Domain Configuration
-    description: You can change your current domain and issue valid Let's Encrypt certificates. 
+  - id: change-domain    
+    name: Domain Configuration    
+    description: You can change your current domain and issue valid Let's Encrypt certificates.
+    permanent: true
     buttons:    
       - confirmText: Are you sure you want to proceed?
         loadingText: Changing domain...
