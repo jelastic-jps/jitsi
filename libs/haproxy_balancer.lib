@@ -1,0 +1,100 @@
+#!/bin/sh
+
+# Copyright 2018 Jelastic, Inc.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+HAPROXY_CONFIG="/etc/haproxy/haproxy.cfg";
+HOST_LIST="/etc/haproxy/hosts";
+TCPMAP_CONFIG='/etc/haproxy/tcpmaps/mappings.xml';
+TMP_TEMPLATE="/tmp/$$.tmp.template.conf";
+
+function rebuildCommon(){
+    rebuildTCPPortMappings;
+    reloadServiceSilent $SERVICE;
+}
+
+function addCommonHostConfig(){
+    touch ${HOST_LIST};
+    grep -q "${host}" ${HOST_LIST} || echo ${host} >> ${HOST_LIST};
+    grep -q "${host}:[0-9]* " ${HAPROXY_CONFIG} && return 0;
+    count=$(grep -c "server webserver" ${HAPROXY_CONFIG});
+    let "count+=1";
+    sed -i "/backend bk_http ###HOSTS/a\server webserver${count} ${host}:443 check ssl verify none" ${HAPROXY_CONFIG};
+    sed -i "s/default_backend.*/default_backend bk_http/" ${HAPROXY_CONFIG};
+    rebuildCommon;
+}
+
+function removeCommonHostConfig(){
+    touch ${HOST_LIST};
+    sed -i '/server.*webserver.*'${host}\:'/d' ${HAPROXY_CONFIG};
+    sed -i "/^${host}$/d" ${HOST_LIST};
+    count=$(grep -c "server webserver" ${HAPROXY_CONFIG});
+    [ "${count}" -eq "0" ] && sed -i "s/default_backend.*/default_backend default/" ${HAPROXY_CONFIG};
+    rebuildCommon;
+}
+
+function clearHosts() {
+    touch ${HOST_LIST};
+    sed -i '/server.*webserver.*/d' ${HAPROXY_CONFIG};
+    sed -i "s/default_backend.*/default_backend default/" ${HAPROXY_CONFIG};
+    sed -i '1,$d' ${HOST_LIST};
+    sed -i '/###TCP SECTION###/,$d' ${HAPROXY_CONFIG};
+    reloadServiceSilent $SERVICE;
+}
+
+function rebuildTCPPortMappings(){
+    touch ${HOST_LIST};
+    if [ "x$TCP_BALANCING" == "x0" ] ||  [ "x$TCP_BALANCING" == "xDISABLED" ] || [ "x$TCP_BALANCING" == "xFALSE" ]
+    then
+           return 0;
+    fi
+    OLDIFS=$IFS
+    IFS=$'\n'
+    if [ -e "$TCPMAP_CONFIG" ]
+    then
+        sed -i '/###TCP SECTION###/,$d' ${HAPROXY_CONFIG};
+        echo "###TCP SECTION###" >> ${HAPROXY_CONFIG};
+        for line in $(${GREP} pair $TCPMAP_CONFIG | ${GREP} -v '!--' )
+        do
+            uniq_id=$(< /dev/urandom tr -dc A-Z | head -c5);
+            fend_port=$($GREP "frontend_port=" <<<  $line | cut -d\" -f2)
+            bend_port=$($GREP "backend_port=" <<< $line | cut -d\" -f4)
+            front_name=$($GREP "description=" <<< $line | cut -d\" -f6|tr -d '[:space:]')
+            option=$($GREP "option=" <<< $line | cut -d\" -f8|tr -d '[:space:]')
+            params=$($GREP "params=" <<< $line | cut -d\" -f10)
+            echo -e "\nfrontend tcp_${front_name}_${uniq_id}" >> ${HAPROXY_CONFIG};
+            echo "bind *:${fend_port} v4v6" >> ${HAPROXY_CONFIG};
+            echo "mode tcp" >> ${HAPROXY_CONFIG};
+            echo -e "default_backend tcp_${front_name}_${uniq_id}_backend \n" >> ${HAPROXY_CONFIG};
+            echo "backend tcp_${front_name}_${uniq_id}_backend" >> ${HAPROXY_CONFIG};
+            echo "mode tcp" >> ${HAPROXY_CONFIG};
+            echo "balance roundrobin" >> ${HAPROXY_CONFIG};
+            [ -n "$option" ] && echo "option $option" >> ${HAPROXY_CONFIG};
+            tcpcount="0";
+            for tcphost in $(cat ${HOST_LIST})
+            do
+                let "tcpcount+=1";
+                echo "server tcp_${front_name}_${uniq_id}_${tcpcount} ${tcphost}:${bend_port} ${params}" >> ${HAPROXY_CONFIG};
+            done
+        done
+    else
+        toActionLog "- mappings.xml not found"
+    fi
+    IFS=$OLDIFS
+    reloadServiceSilent $SERVICE;
+}
+
+function reloadConfigs(){
+   restartServiceSilent $SERVICE;
+}
