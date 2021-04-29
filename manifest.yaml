@@ -33,7 +33,7 @@ onBeforeInstall: |-
           nodeGroup: "cp",
           isRedeploySupport: false,
           displayName: "Jitsy Server",
-          addons: change-domain,
+          addons: 'change-domain',
           extip: true
         }]
       }
