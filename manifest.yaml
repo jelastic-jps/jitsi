@@ -33,8 +33,8 @@ onBeforeInstall: |-
           nodeGroup: "cp",
           isRedeploySupport: false,
           displayName: "Jitsy Server",
-          addons: 'change-domain',
-          extip: true
+          addons: "change-domain",
+          extip: false
         }]
       }
 
@@ -46,7 +46,7 @@ onBeforeInstall: |-
           scalingMode: "stateful",
           displayName: "Jitsy Balancer",
           nodeGroup: "bl",
-          extip: false
+          extip: true
         })
       }
       return resp;
@@ -89,7 +89,8 @@ settings:
 
 
 onInstall:
-  - enableAudio
+  - enableAudio:
+       nodeId: ${nodes.cp.master.id}
   - setSndOwnership
   - setup
   - if ('${settings.topologytype}' == '2cluster'):            
@@ -106,7 +107,8 @@ onInstall:
 actions:
   enableAudio:
     script: |
-      var params = {envName:"${env.envName}"}, appid = "ext", script = "EnableAudio",
+      var nodeId = getParam("nodeId");
+      var params = {envName:"${env.envName}"}, appid = "ext", script = "EnableAudio", nodeId = nodeId,
           resp = jelastic.dev.scripting.Eval(appid, session, script, params);
       return resp.response ? resp.response:resp;
 
