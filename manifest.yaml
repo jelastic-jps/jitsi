@@ -21,6 +21,33 @@ categories:
 globals: 
   user: admin 
   password: ${fn.password}
+  
+onBeforeInit: |
+  var BANDWIDTH_LIMIT = "network.bandwidth.limitation",
+    LIMIT = 500,
+    markup = "",
+    value,
+    name,
+    resp,
+    q;
+
+  q = jelastic.billing.account.GetQuotas(BANDWIDTH_LIMIT).array || [];
+  name = q[0].quota.name;
+  value = q[0].value;
+  if (value < LIMIT) {
+      markup = "Quota limits: " + name + " = " + value + ".  Please upgrade your account.";
+  }
+
+  resp = { result: 0 };
+
+  if (markup) {
+  resp.settings = resp.settings || {};
+  resp.settings.fields = resp.settings.fields || [];
+  resp.settings.fields.push(
+    {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": markup},
+    {"type": "compositefield","height": 0,"hideLabel": true,"width": 0,"items": [{"height": 0,"type": "string","required": true}]});
+  }
+  return resp;
 
 nodes:
   nodeType: dockerengine
