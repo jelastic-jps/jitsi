@@ -38,7 +38,6 @@ onBeforeInit: |
       markup = "Quota limits: " + name + " = " + value + ".  Please upgrade your account.";
   }
 
-  resp = { result: 0 };
 
   if (markup) {
   resp.settings = resp.settings || {};
