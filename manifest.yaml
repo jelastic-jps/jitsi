@@ -31,11 +31,13 @@ onBeforeInit: |
     resp,
     q;
 
-  q = jelastic.billing.account.GetQuotas(BANDWIDTH_LIMIT).array || [];
+  resp = jelastic.billing.account.GetQuotas(BANDWIDTH_LIMIT);
+  if (resp.result != 0) return resp;
+  q = resp.array || [];
   name = q[0].quota.name;
   value = q[0].value;
   if (value < LIMIT) {
-      markup = "Quota limits: " + name + " = " + value + ".  Please upgrade your account.";
+      markup = "Insufficient bandwidth limit. Please upgrade your account.";
   }
 
 
