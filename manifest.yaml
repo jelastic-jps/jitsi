@@ -125,7 +125,7 @@ actions:
   setup:
     - cmd[cp]: |-
         echo '/root' >> /etc/jelastic/redeploy.conf
-        git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet -b develop;
+        git clone https://github.com/jelastic/docker-jitsi-meet && cd docker-jitsi-meet 
         cp env.example .env;
 
         #check if region is in public suffix list
@@ -249,6 +249,7 @@ actions:
 
   setSndOwnership:
      - cmd[cp]: |-
+        sleep 5
         CMD="chown 999 -R /dev/snd"
         echo $CMD >> /etc/rc.d/rc.local
         $CMD
