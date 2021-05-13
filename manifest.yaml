@@ -22,39 +22,8 @@ globals:
   user: admin
   password: ${fn.password}
 
-onBeforeInstall: |-
-      var resp = {
-        result: 0,
-        nodes: [{
-          count: 1,
-          cloudlets: 48,
-          nodeType: "dockerengine",
-          scalingMode: "stateful",
-          nodeGroup: "cp",
-          isRedeploySupport: false,
-          displayName: "Jitsy Server",
-          addons: "change-domain",
-          extip: false
-        }]
-      }
-
-      if ('${settings.topologytype}' == '2cluster') {
-        resp.nodes.push({
-          count: 1,
-          nodeType: "haproxy",
-          cloudlets: 8,
-          scalingMode: "stateful",
-          displayName: "Jitsy Balancer",
-          nodeGroup: "bl",
-          extip: true
-        })
-        delete resp.nodes[0].addons;
-      }
-      return resp;
-
-nodes: definedInOnBeforeInstall
-
 settings:
+  main:
     fields:
       - name: topologytype
         type: radiolist
@@ -72,52 +41,74 @@ settings:
             increment: 1
             useTips: true
             caption: Shards Number
-            type: slider
-            hidden: false
-            setGlobals: 
-              shards: ${settings.shards}
-          
-    domain:
+            type: spinner
+
+  domain:
+    fields:
       - name: displayfield
         type: displayfield
         hideLabel: true
-        markup: Make sure the the new domain is bound already to the environment via CNAME or via A Record
+        markup: 'IMPORTANT: the new domain should be bound already to the environment via CNAME, ANAME or via A Record'
       - name: domain
         hideLabel: true
         caption: Domain
         type: string
         vtype: extdomain
 
+nodes: 
+  - count: 1
+    nodeType: haproxy
+    cloudlets: 8
+    scalingMode: stateful
+    displayName: Jitsi Balancer
+    nodeGroup: bl
+    extip: true
+    
+  - count: 1
+    cloudlets: 48
+    nodeType: dockerengine
+    scalingMode: stateful
+    nodeGroup: "cp"
+    isRedeploySupport: false
+    displayName: Jitsi Server
+    addons: change-domain
+    extip: true
+
+onBeforeInstall: |-
+    if ('${settings.topologytype}' == '2cluster') {
+      jps.nodes[1].count = ${settings.shards:0};
+      jps.nodes[1].extip = false;
+      delete jps.nodes[1].addons;
+    } else {
+      jps.nodes.splice(0, 1);
+      jps.globals.standalone = 1;
+    }
+    return jps;
 
 onInstall:
   - enableAudio
   - setSndOwnership
-  - if ('${settings.topologytype}' == '1standalone'):             
-      - setExtIpEnabled:
-          enabled: true
-          nodeGroup: cp
-      - cmd[cp]: |-
-          echo 'standalone' > /tmp/jitsi-mode
   - setup
   - if ('${settings.topologytype}' == '2cluster'):            
-      - setNodeCount:
-          count: ${settings.shards}
-          nodeGroup: cp    
       - tweakLb
       - env.control.LinkNodes:
-        parentNodes: ${nodes.bl.join(id,;)} 
+        parentNodes: ${nodes.bl.join(id,;)}
         childNodes: ${nodes.cp.join(id,;)}
+      - script: /scripts/idna.js
       - install: https://github.com/jelastic-jps/lets-encrypt/blob/master/manifest.jps?_r=${fn.random}
         nodeGroup: bl   
         skipEmail: true
+        settings:
+          customDomains: ${response.domain}
+          fallbackToX1: true        
           
 actions:
   enableAudio:
-    script: |
+    script[${nodes.cp.join(id,)}]: |
       var params = {
           envName:"${env.envName}",
-          nodeId: ${nodes.cp.master.id}
-          }
+          nodeId: nodeId
+      }
       var appid = "ext", script = "EnableAudio"
       resp = jelastic.dev.scripting.Eval(appid, session, script, params);
       return resp.response ? resp.response:resp;
@@ -138,7 +129,7 @@ actions:
           -e "s|HTTP_PORT=.*|HTTP_PORT=80|g" \
           -e "s|HTTPS_PORT=.*|HTTPS_PORT=443|g" \
           -e "s|#PUBLIC_URL=.*|PUBLIC_URL=https://${env.domain}|g" \
-          -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=0|g" \
+          -e "s|#ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=${globals.standalone:0}|g" \
           -e "s|#LETSENCRYPT_DOMAIN=.*|LETSENCRYPT_DOMAIN=${env.domain}|g" \
           -e "s|#LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${user.email}|g" \
           -e "s|#LETSENCRYPT_USE_STAGING=.*|LETSENCRYPT_USE_STAGING=${USE_STAGING}|g" \
@@ -148,8 +139,6 @@ actions:
           -e "s|#ENABLE_RECORDING=.*|ENABLE_RECORDING=1|g" \
           -e "s|#XMPP_CROSS_DOMAIN=.*|XMPP_CROSS_DOMAIN=true|g" \
           .env
-
-        [ -f /tmp/jitsi-mode ] && grep -q standalone /tmp/jitsi-mode && sed -i.bak -e "s|ENABLE_LETSENCRYPT=.*|ENABLE_LETSENCRYPT=1|g" .env
 
         [ "${settings.loadtest:}" ] && {
           sed -i -e "s|#_JAVA_OPTIONS|_JAVA_OPTIONS|g" .env
@@ -256,17 +245,18 @@ actions:
         
   tweakLb:
      - cmd[bl]: |-
-        sed -i '/cookie/d' /etc/haproxy/haproxy.cfg 
-        sed -i '/balance/d' /etc/haproxy/haproxy.cfg 
-        sed -i '/mode http/a hash-type consistent' /etc/haproxy/haproxy.cfg 
-        sed -i '/mode http/a balance url_param room' /etc/haproxy/haproxy.cfg
+        sed -i "/cookie/d" /etc/haproxy/haproxy.cfg 
+        sed -i "/balance/d" /etc/haproxy/haproxy.cfg 
+        sed -i "/mode http/a hash-type consistent" /etc/haproxy/haproxy.cfg 
+        sed -i "/mode http/a balance url_param room" /etc/haproxy/haproxy.cfg
+        sed -i "s|if { ssl_fc|unless { ssl_fc|g" /etc/haproxy/haproxy.cfg
         wget ${baseUrl}/libs/haproxy_balancer.lib -O  /var/lib/jelastic/overrides/haproxy_balancer.lib 
        user: root 
      
-  updateLbSettings:
-     - cmd[bl]: |- 
-        echo sed -i 's/:80 cookie S3 check/:443 check ssl verify none/g' /etc/haproxy/haproxy.cfg
-       user: root   
+#  updateLbSettings:
+#     - cmd[bl]: |- 
+#        echo sed -i 's/:80 cookie S3 check/:443 check ssl verify none/g' /etc/haproxy/haproxy.cfg
+#       user: root   
 
 addons:
   - id: change-domain
@@ -306,9 +296,9 @@ addons:
             docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
 
 success: |
-  **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)
-  **User**: ${globals.user}
-  **Password**: ${globals.password}
+  **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
+  **User**: ${globals.user}  
+  **Password**: ${globals.password}  
 
   Useful links:
   * [Secure, Simple and Scalable Video Conferencing with Jitsi](https://jelastic.com/blog/jitsi-video-conferencing/)
