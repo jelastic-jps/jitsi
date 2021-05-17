@@ -63,7 +63,15 @@ nodes:
     displayName: Jitsi Balancer
     nodeGroup: bl
     extip: true
-    
+
+  - count: 1
+    nodeType: storage
+    cloudlets: 8
+    scalingMode: stateful
+    displayName: Jibri Recordings
+    nodeGroup: storage
+    extip: true
+
   - count: 1
     cloudlets: 48
     nodeType: dockerengine
@@ -73,14 +81,25 @@ nodes:
     displayName: Jitsi Server
     addons: change-domain
     extip: true
+    volumes: [
+        "/root/.jitsi-meet-cfg/jibri/recordings",
+    ] 
+    volumeMounts: {
+        "/root/.jitsi-meet-cfg/jibri/recordings": {
+            readOnly: "false",
+            sourcePath: "/data/recordings",
+            sourceNodeGroup: "storage"
+        }
+  }
 
 onBeforeInstall: |-
     if ('${settings.topologytype}' == '2cluster') {
-      jps.nodes[1].count = ${settings.shards:0};
-      jps.nodes[1].extip = false;
-      delete jps.nodes[1].addons;
+      jps.nodes[2].count = ${settings.shards:0};
+      jps.nodes[2].extip = false;
+      delete jps.nodes[2].addons;
     } else {
-      jps.nodes.splice(0, 1);
+      delete jps.nodes[2].volumeMounts;      
+      jps.nodes.splice(0, 2;
       jps.globals.standalone = 1;
     }
     return jps;
@@ -238,7 +257,6 @@ actions:
 
   setSndOwnership:
      - cmd[cp]: |-
-        sleep 5
         CMD="chown 999 -R /dev/snd"
         echo $CMD >> /etc/rc.d/rc.local
         $CMD
@@ -253,11 +271,6 @@ actions:
         wget ${baseUrl}/libs/haproxy_balancer.lib -O  /var/lib/jelastic/overrides/haproxy_balancer.lib 
        user: root 
      
-#  updateLbSettings:
-#     - cmd[bl]: |- 
-#        echo sed -i 's/:80 cookie S3 check/:443 check ssl verify none/g' /etc/haproxy/haproxy.cfg
-#       user: root   
-
 addons:
   - id: change-domain
     name: Domain Configuration
@@ -298,7 +311,7 @@ addons:
 success: |
   **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
   **User**: ${globals.user}  
-  **Password**: ${globals.password}  
+  **Password**: ${globals.password}    
 
   Useful links:
   * [Secure, Simple and Scalable Video Conferencing with Jitsi](https://jelastic.com/blog/jitsi-video-conferencing/)
