@@ -81,16 +81,13 @@ nodes:
     displayName: Jitsi Server
     addons: change-domain
     extip: true
-    volumes: [
-        "/root/.jitsi-meet-cfg/jibri/recordings",
-    ] 
-    volumeMounts: {
-        "/root/.jitsi-meet-cfg/jibri/recordings": {
-            readOnly: "false",
-            sourcePath: "/data/recordings",
-            sourceNodeGroup: "storage"
-        }
-  }
+    volumes:
+      - /root/.jitsi-meet-cfg/jibri/recordings
+    volumeMounts:
+      /root/.jitsi-meet-cfg/jibri/recordings:
+        readOnly: false
+        sourcePath: /data/recordings
+        sourceNodeGroup: storage
 
 onBeforeInstall: |-
     if ('${settings.topologytype}' == '2cluster') {
@@ -274,6 +271,9 @@ actions:
         sed -i "s|if { ssl_fc|unless { ssl_fc|g" /etc/haproxy/haproxy.cfg
         wget ${baseUrl}/libs/haproxy_balancer.lib -O  /var/lib/jelastic/overrides/haproxy_balancer.lib 
        user: root 
+
+     - cmd[cp]: |-
+        service docker restart
      
 addons:
   - id: change-domain
@@ -315,7 +315,7 @@ addons:
 success: |
   **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
   **User**: ${globals.user}  
-  **Password**: ${globals.password}    
+  **Password**: ${globals.password}  
 
   Useful links:
   * [Secure, Simple and Scalable Video Conferencing with Jitsi](https://jelastic.com/blog/jitsi-video-conferencing/)
