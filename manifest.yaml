@@ -227,6 +227,10 @@ actions:
           slave.pcm "aduplex"
         }' > ~/.jitsi-meet-cfg/jibri/.asoundrc
 
+        printf '#!/bin/bash
+        RECORDINGS_DIR=$1
+        exit 0' > ~/.jitsi-meet-cfg/jibri/finalize.sh
+
         docker-compose -f docker-compose.yml -f jibri.yml up -d
 
         #Checking of container is up and running
