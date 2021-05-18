@@ -99,7 +99,7 @@ onBeforeInstall: |-
       delete jps.nodes[2].addons;
     } else {
       delete jps.nodes[2].volumeMounts;      
-      jps.nodes.splice(0, 2;
+      jps.nodes.splice(0, 2);
       jps.globals.standalone = 1;
     }
     return jps;
