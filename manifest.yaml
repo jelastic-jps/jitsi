@@ -63,6 +63,9 @@ nodes:
     displayName: Jitsi Balancer
     nodeGroup: bl
     extip: true
+    env:
+      BACKEND_PORT: 443
+      BACKEND_OPTIONS: check ssl verify none
 
   - count: 1
     nodeType: storage
@@ -107,9 +110,6 @@ onInstall:
   - setup
   - if ('${settings.topologytype}' == '2cluster'):            
       - tweakLb
-      - env.control.LinkNodes:
-        parentNodes: ${nodes.bl.join(id,;)}
-        childNodes: ${nodes.cp.join(id,;)}
       - script: /scripts/idna.js
       - install: https://github.com/jelastic-jps/lets-encrypt/blob/master/manifest.jps?_r=${fn.random}
         nodeGroup: bl   
@@ -264,14 +264,14 @@ actions:
         
   tweakLb:
      - cmd[bl]: |-
-        sed -i "/cookie/d" /etc/haproxy/haproxy.cfg 
+        sed -i "/SRVNAME/d" /etc/haproxy/haproxy.cfg 
         sed -i "/balance/d" /etc/haproxy/haproxy.cfg 
         sed -i "/mode http/a hash-type consistent" /etc/haproxy/haproxy.cfg 
         sed -i "/mode http/a balance url_param room" /etc/haproxy/haproxy.cfg
         sed -i "s|if { ssl_fc|unless { ssl_fc|g" /etc/haproxy/haproxy.cfg
-        wget ${baseUrl}/libs/haproxy_balancer.lib -O  /var/lib/jelastic/overrides/haproxy_balancer.lib 
        user: root 
-
+       
+     - restartService[bl]
      - cmd[cp]: |-
         service docker restart
      
