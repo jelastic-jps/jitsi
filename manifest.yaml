@@ -30,7 +30,7 @@ settings:
         caption: Deployment Type
         values:
           1standalone: Standalone
-          2cluster: Cluster
+          2cluster: Cluster (Beta)
         hideLabel: false
         default: 1standalone
         showIf:
