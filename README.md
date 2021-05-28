@@ -8,7 +8,7 @@ No time for the briefing. Different devices: Windows, Mac, iOS, Android, etc. Tr
  
 ## Jitsi Deployment to the Cloud
 
-Get your Jelastic account at any of available [hosting provider](https://jelastic.cloud/).
+Get your Jelastic account at any of the available [hosting providers](https://jelastic.cloud/).
 
 Click the **DEPLOY TO JELASTIC** button, specify your email address within the widget and press **Install**.
 
@@ -18,26 +18,26 @@ Click the **DEPLOY TO JELASTIC** button, specify your email address within the w
   
 ## Installation Process
 
-In the opened confirmation window at Jelastic dashboard, if required change:  
+In the opened window at Jelastic dashboard, customize your installation:
+
+* **Deployment Type**
+  * _Standalone_ - all-in-one single node Jitsi installation
+  * _Cluster_ - a reliable Jitsi cluster with multiple nodes (defined via additional **Shards Number** field), HAProxy load balancer, and a dedicated storage node to keep all the records in the same place
+
+<img src="images/cluster-scheme.png" width="400">
 
 * __Environment__ name  
-
 * __Display Name__  
-
 * destination __[Region](https://docs.jelastic.com/environment-regions)__ if several are available  
 
-and click on __Install__.
+Click **Install** to proceed.
 
-<p align="left"> 
-<img src="images/install.png" width="650">
-</p>
+![Deploy to Jelastic](images/install.png)
 
 Once the deployment is finished, you’ll see an appropriate success pop-up.
 
-<p align="left"> 
-<img src="images/success.png" width="430">
-</p>
+![Deploy to Jelastic](images/success.png)
 
- The application is ready to use just press **Open in Browser** button and proceed to admin panel. Use provided credentials creating meetings.
+The application is ready! Just press the **Open in Browser** button to access the admin panel. Use provided credentials to create meetings.
 
-For production mode, the installation will require a custom domain and traffic encryption with valid SSL certificate wich can be installed with [Let's Encrypt SSL Add-On](https://jelastic.com/blog/free-ssl-certificates-with-lets-encrypt/). Learn more how to [install Jitsi Meet in Jelastic](https://jelastic.com/blog/jitsi-video-conferencing/).
+Additional configurations like custom domain, SSL traffic encryption, some common Jitsi settings and upgrade procedure are described in detail in the dedicated **[Jitsi Video Conferencing](https://jelastic.com/blog/jitsi-video-conferencing/)** article.
