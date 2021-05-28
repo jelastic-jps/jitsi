@@ -58,6 +58,7 @@ settings:
 nodes: 
   - count: 1
     nodeType: haproxy
+    tag: 2.4.0
     cloudlets: 8
     scalingMode: stateful
     displayName: Jitsi Balancer
@@ -110,6 +111,11 @@ onInstall:
   - setup
   - if ('${settings.topologytype}' == '2cluster'):            
       - tweakLb
+      - env.file.AddFavorite:
+        nodeGroup: storage
+        path: /data/recordings
+        keyword: RECORDINGS
+        isDir: true
       - script: /scripts/idna.js
       - install: https://github.com/jelastic-jps/lets-encrypt/blob/master/manifest.jps?_r=${fn.random}
         nodeGroup: bl   
