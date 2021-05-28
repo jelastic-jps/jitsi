@@ -1,4 +1,4 @@
-<img align="left" width="150" src="images/logo.svg">
+<img align="left" width="150" src="images/logo.svg" alt="Jitsi logo">
 
 # Jitsi 
 
@@ -24,7 +24,7 @@ In the opened window at Jelastic dashboard, customize your installation:
   * _Standalone_ - all-in-one single node Jitsi installation
   * _Cluster_ - a reliable Jitsi cluster with multiple nodes (defined via additional **Shards Number** field), HAProxy load balancer, and a dedicated storage node to keep all the records in the same place
 
-<img src="images/cluster-scheme.png" width="400">
+<img src="images/cluster-scheme.png" alt="Jitsi Highly-Available Cluster" width="400">
 
 * __Environment__ name  
 * __Display Name__  
@@ -32,11 +32,11 @@ In the opened window at Jelastic dashboard, customize your installation:
 
 Click **Install** to proceed.
 
-![Deploy to Jelastic](images/install.png)
+![install Jitsi cluster](images/install.png)
 
 Once the deployment is finished, you’ll see an appropriate success pop-up.
 
-![Deploy to Jelastic](images/success.png)
+![Jitsi successfully deployed](images/success.png)
 
 The application is ready! Just press the **Open in Browser** button to access the admin panel. Use provided credentials to create meetings.
 
