@@ -96,7 +96,7 @@ nodes:
 onBeforeInstall: |-
     if ('${settings.topologytype}' == '2cluster') {
       jps.nodes[2].count = ${settings.shards:0};
-      jps.nodes[2].extip = false;
+      jps.nodes[2].extip = true;
       delete jps.nodes[2].addons;
     } else {
       delete jps.nodes[2].volumeMounts;      
