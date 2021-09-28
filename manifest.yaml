@@ -190,6 +190,8 @@ addons:
     name: Domain Configuration    
     description: You can change your current domain and issue valid Let's Encrypt certificates.
     permanent: true
+    globals:
+      TOO_MANY_CERTS: too many certificates
     buttons:    
       - confirmText: Are you sure you want to proceed?
         loadingText: Changing domain...
@@ -198,7 +200,11 @@ addons:
         successText: The domain has been updated successfully!
         settings: domain
         title: Please specify the new domain name 
-        
+      - confirmText: Are you sure you want to update SSL certificates?
+        action: updateSSL
+        caption: Update SSL
+        successText: The SSL certificates has been updated successfully!
+
     actions:
       changeDomain:
         - cmd[cp]: |-
@@ -221,6 +227,27 @@ addons:
               -e "s|PUBLIC_URL=.*|PUBLIC_URL=https://${settings.domain}|g" \
               .env
             docker-compose -f docker-compose.yml -f jibri.yml up -d --force-recreate
+            
+      updateSSL:
+          - cmd [cp]: |-
+              appid=$(docker ps  | grep 'jitsi/web' | awk '{print $1}')
+              resp=$(docker exec ${appid} /config/acme.sh/acme.sh --cron --force --home '/config/acme.sh' 2>&1)
+              echo $resp | grep -q 'Cert success' && exit 0 || {
+                echo $resp | grep -q '${globals.TOO_MANY_CERTS}' && { echo '${globals.TOO_MANY_CERTS}' && exit 0; }
+              }
+            user: root
+          - script: |-
+              if ("${response.out}" == "${globals.TOO_MANY_CERTS}") {
+                return {
+                  result: 22,
+                  type: "warning",
+                  message: "Too many certificates already issued for this exact set of domains. See [https://letsencrypt.org/docs/rate-limits/](https://letsencrypt.org/docs/rate-limits/)"
+                }
+              }
+              
+              return {
+                result: 0
+              }
     
 success: | 
   **Jitsi Server**: [https://${env.domain}/](https://${env.domain}/)  
