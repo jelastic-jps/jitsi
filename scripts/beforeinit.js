@@ -1,4 +1,4 @@
-var resp, name, value, endpoint_markup = "",
+var resp, name, value, bandwidth_markup = "",
     BANDWIDTH_LIMIT = "network.bandwidth.limitation";
     q = jelastic.billing.account.GetQuotas(BANDWIDTH_LIMIT).array || [];
 
@@ -7,9 +7,8 @@ for (var i = 0, n = q.length; i < n; i++) {
     value = q[i].value;
     
     if (name == BANDWIDTH_LIMIT) {
-        endpoint = !! value;
-        if (endpoint == false) {
-            endpoint_markup = "Network bandwidth limitation quota is loo low for a Jitsi application. Please contact support.";
+        if (value < 500) {
+            bandwidth_markup = "Network bandwidth limitation quota is loo low for a Jitsi application. Please contact support.";
         } 
         continue;
     }
@@ -17,9 +16,9 @@ for (var i = 0, n = q.length; i < n; i++) {
 
 resp = { result: 0, settings: {fields: []} };
 
-if (endpoint_markup){
+if (bandwidth_markup){
     resp.settings.fields.push(
-        {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": endpoint_markup},
+        {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": bandwidth_markup},
         {"type": "compositefield","height": 0,"hideLabel": true,"width": 0,"items": [{"height": 0,"type": "string","required": true}]}
     )
 }
