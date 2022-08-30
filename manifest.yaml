@@ -18,6 +18,8 @@ categories:
 - apps/dev-and-admin-tools
 - apps/collaboration
   
+onBeforeInit: /scripts/beforeinit.js
+
 globals: 
   user: admin 
   password: ${fn.password}
