@@ -9,7 +9,7 @@ for (var i = 0, n = q.length; i < n; i++) {
     if (name == BANDWIDTH_LIMIT) {
         endpoint = !! value;
         if (endpoint == false) {
-            endpoint_markup = "Bandwidth limitation is loo low for a Jitsi application. Please contact support.";
+            endpoint_markup = "Network bandwidth limitation quota is loo low for a Jitsi application. Please contact support.";
         } 
         continue;
     }
