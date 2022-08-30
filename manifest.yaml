@@ -30,7 +30,7 @@ onBeforeInit: |
     resp,
     q;
 
-  if ((parseInt("${quota.data.network.bandwidth.limitation.value}") < LIMIT) {
+  if (parseInt("${quota.data.network.bandwidth.limitation.value}") < LIMIT) {
       markup = "Insufficient bandwidth limit. Please upgrade your account.";
   }
 
