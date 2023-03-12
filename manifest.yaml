@@ -21,6 +21,29 @@ categories:
 globals: 
   user: admin 
   password: ${fn.password}
+  
+onBeforeInit: |
+  var LIMIT = 500,
+    markup = "",
+    value,
+    name,
+    resp,
+    q;
+
+  if (parseInt("${quota.data.network.bandwidth.limitation.value}") < LIMIT) {
+      markup = "Insufficient bandwidth limit. Please upgrade your account.";
+  }
+
+
+  if (markup) {
+      jps.settings = jps.settings || {};
+      jps.settings.fields = jps.settings.fields || [];
+      jps.settings.fields.push(
+        {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": markup},
+        {"type": "compositefield","height": 0,"hideLabel": true,"width": 0,"items": [{"height": 0,"type": "string","required": 
+      true}]});
+  }
+  return { result: 0, settings: jps.settings };
 
 nodes:
   nodeType: dockerengine
