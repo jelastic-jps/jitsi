@@ -151,14 +151,17 @@ actions:
           slave.pcm "aduplex"
         }' > ~/.jitsi-meet-cfg/jibri/.asoundrc
 
-        docker-compose -f docker-compose.yml -f jibri.yml up -d
+        docker-compose -f docker-compose.yml -f jibri.yml up -d --quiet-pull
 
         #Checking of container is up and running 
-        until [ "`/usr/bin/docker inspect -f {{.State.Running}} docker-jitsi-meet_prosody_1`"=="true" ]; do
+        until [ "`/usr/bin/docker inspect -f {{.State.Running}} docker-jitsi-meet-prosody-1`"=="true" ]; do
           sleep 1
-          print '.'
+          echo '.'
         done;
-
+        until [[ -f /root/.jitsi-meet-cfg/prosody/config/prosody.cfg.lua ]] ; do
+          sleep 1
+          echo '.'
+        done
         #Adding admin user 
         docker-compose exec -T prosody prosodyctl --config /config/prosody.cfg.lua register "${globals.user}" meet.jitsi "${globals.password}"
         [ "${settings.loadtest:}" ] && {
